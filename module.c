@@ -1,7 +1,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linix/proc_fs.h>
+#include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 
 MODULE_LICENSE("GPL");
