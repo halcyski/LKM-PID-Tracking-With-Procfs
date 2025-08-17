@@ -1,6 +1,6 @@
 KERNEL_DIR = /home/hdski/WSL2-Linux-Kernel
 
-obj-m += my_module.o
+obj-m += module.o
 
 all:
 	make -C $(KERNEL_DIR) M=$(PWD) modules
