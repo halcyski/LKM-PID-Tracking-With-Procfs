@@ -3,6 +3,7 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
+#include <linux/kprobe.h>
 
 MODULE_LICENSE("GPL");
 
@@ -66,7 +67,7 @@ static const struct proc_ops proc_ops = {
 
 // This function is called when the module is loaded
 static int __init my_module_init(void) {
-	proc_create(PROC_NAME, 0666, NULL, &proc_ops);
+	proc_create(PROC_NAME, 0644, NULL, &proc_ops);
 	printk(KERN_INFO "LKM: /proc/%s created\n", PROC_NAME);
 	return 0; // yay
 }
