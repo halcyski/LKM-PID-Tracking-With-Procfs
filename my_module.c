@@ -10,9 +10,12 @@
 MODULE_LICENSE("GPL");
 
 #define PROC_NAME "my_proc"
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 // PID to track
-static long PID = 0;
+static pid_t PID = 0;
+// directory for proc entry
+static struct proc_dir_entry* proc_entry;
 
 
 // This function will be called when the /proc/my_proc file is read
@@ -27,11 +30,11 @@ static ssize_t proc_read(struct file *file, char __user *usr_buf, size_t count, 
 	}
 
 	// len = number of characters written to buffer
-	len = sprintf(buffer, "Currently monitoring PID: %ld\n", pid);
+	len = scnprintf(buffer, sizeof(buffer) "Currently monitoring PID: %d\n", pid);
 
 	// copy kernel buffer to users buffer 
 	if (copy_to_user(usr_buf, buffer, len)) { // send the buffer created with sprintf to the user
-		return -EFAULT; // error in copying
+		return -EFAULT; // error in copying	
 	}
 
 	*ppos = len; // update the position for next read with the length of the buffer
@@ -51,7 +54,10 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 		return -EINVAL; // invalid argument
 	}
 
-	if (copy_from_user(buffer, usr_buf, count)) {
+	// copy only the minimum of count or buffer size - 1
+	n = min_t(size_t, count, sizeof(buf) - 1);
+
+	if (copy_from_user(buffer, usr_buf, n)) {
 		return -EFAULT; // error in copying
 	}
 
@@ -64,7 +70,7 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 		}
 
 		WRITE_ONCE(PID, pid);
-		printk(KERN_INFO "LKM: Now monitoring PID %ld\n", PID);
+		pr_info("Now monitoring PID %ld\n", PID);
 	}
 	else {
 		return -EINVAL; // invalid input (kstrtol conversion failed)
@@ -80,16 +86,21 @@ static const struct proc_ops proc_ops = {
 
 // This function is called when the module is loaded
 static int __init my_module_init(void) {
-	proc_create(PROC_NAME, 0644	, NULL, &proc_ops);
-	printk(KERN_INFO "LKM: /proc/%s created\n", PROC_NAME);
+	proc_entry = proc_create(PROC_NAME, 0644, NULL, &proc_ops);
+
+	if (!proc_entry)
+		return -ENOMEM;
+
+	pr_info("/proc/%s created\n", PROC_NAME);
 	return 0; // yay
 }
 
 static void __exit my_module_exit(void) {
-	remove_proc_entry(PROC_NAME, NULL);
-	printk(KERN_INFO "LKM: /proc/%s removed\n", PROC_NAME);
+	if (proc_entry)
+		proc_remove(proc_entry);
+
+	pr_info("/proc/%s removed\n", PROC_NAME);
 }
 
 module_init(my_module_init);
 module_exit(my_module_exit);
-// gulp
