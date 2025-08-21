@@ -3,7 +3,6 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
-#include <linux/kprobe.h>
 #include <linux/capability.h>
 #include <linux/user_namespace.h>
 
@@ -22,7 +21,7 @@ static struct proc_dir_entry* proc_entry;
 static ssize_t proc_read(struct file *file, char __user *usr_buf, size_t count, loff_t *ppos) {
 	char buffer[128]; // generous buffer for output string + PID
 	long len = 0; // length of the string to be written to the user buffer
-	long pid = READ_ONCE(PID); // read atomically 
+	pid_t pid = READ_ONCE(PID); // read atomically 
 
 	// if this isnt the first read, return 0 to indicate EOF
 	if (*ppos != 0) {
@@ -30,7 +29,7 @@ static ssize_t proc_read(struct file *file, char __user *usr_buf, size_t count, 
 	}
 
 	// len = number of characters written to buffer
-	len = scnprintf(buffer, sizeof(buffer) "Currently monitoring PID: %d\n", pid);
+	len = scnprintf(buffer, sizeof(buffer), "Currently monitoring PID: %d\n", pid);
 
 	// copy kernel buffer to users buffer 
 	if (copy_to_user(usr_buf, buffer, len)) { // send the buffer created with sprintf to the user
@@ -43,7 +42,8 @@ static ssize_t proc_read(struct file *file, char __user *usr_buf, size_t count, 
 
 static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t count, loff_t* ppos) {
 	char buffer[32];
-	long pid = 0;
+	pid_t pid = 0;
+	long n;
 
 	if (!ns_capable(&init_user_ns, CAP_SYS_ADMIN)) {
 		return -EPERM;
@@ -55,7 +55,7 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 	}
 
 	// copy only the minimum of count or buffer size - 1
-	n = min_t(size_t, count, sizeof(buf) - 1);
+	n = min_t(size_t, count, sizeof(buffer) - 1);
 
 	if (copy_from_user(buffer, usr_buf, n)) {
 		return -EFAULT; // error in copying
@@ -63,14 +63,14 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 
 	buffer[count] = '\0'; // null terminate the string
 
-	if (kstrtol(buffer, 10, &pid) == 0) {
+	if (kstrtoint(buffer, 10, &pid) == 0) {
 
 		if (pid < 0) {
 			return -EINVAL; // negative PID is invalid
 		}
 
 		WRITE_ONCE(PID, pid);
-		pr_info("Now monitoring PID %ld\n", PID);
+		pr_info("Now monitoring PID %d\n", PID);
 	}
 	else {
 		return -EINVAL; // invalid input (kstrtol conversion failed)
