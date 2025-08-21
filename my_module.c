@@ -50,11 +50,16 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 	buffer[count] = '\0'; // null terminate the string
 
 	if (kstrtol(buffer, 10, &pid) == 0) {
+
+		if (pid < 0) {
+			return -EINVAL; // negative PID is invalid
+		}
+
 		PID = pid;
 		printk(KERN_INFO "LKM: Now monitoring PID %ld\n", PID);
 	}
 	else {
-		return -EINVAL; // invalid input (pid is 0)
+		return -EINVAL; // invalid input (kstrtol conversion failed)
 	}
 
 	return count;
@@ -67,7 +72,7 @@ static const struct proc_ops proc_ops = {
 
 // This function is called when the module is loaded
 static int __init my_module_init(void) {
-	proc_create(PROC_NAME, 0644, NULL, &proc_ops);
+	proc_create(PROC_NAME, 0644	, NULL, &proc_ops);
 	printk(KERN_INFO "LKM: /proc/%s created\n", PROC_NAME);
 	return 0; // yay
 }
