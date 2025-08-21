@@ -19,14 +19,15 @@ static long PID = 0;
 static ssize_t proc_read(struct file *file, char __user *usr_buf, size_t count, loff_t *ppos) {
 	char buffer[128]; // generous buffer for output string + PID
 	long len = 0; // length of the string to be written to the user buffer
+	long pid = READ_ONCE(PID); // read atomically 
 
 	// if this isnt the first read, return 0 to indicate EOF
 	if (*ppos != 0) {
 		return 0; // EOF
 	}
 
-	// len = numbre of characters written to buffer
-	len = sprintf(buffer, "Currently monitoring PID: %ld\n", PID);
+	// len = number of characters written to buffer
+	len = sprintf(buffer, "Currently monitoring PID: %ld\n", pid);
 
 	// copy kernel buffer to users buffer 
 	if (copy_to_user(usr_buf, buffer, len)) { // send the buffer created with sprintf to the user
@@ -41,6 +42,10 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 	char buffer[32];
 	long pid = 0;
 
+	if (!ns_capable(&init_user_ns, CAP_SYS_ADMIN)) {
+		return -EPERM;
+	} // check if the user has CAP_SYS_ADMIN capability
+
 	// ensure we dont overflow kernel buffer
 	if (count > sizeof(buffer) - 1) {
 		return -EINVAL; // invalid argument
@@ -49,6 +54,7 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 	if (copy_from_user(buffer, usr_buf, count)) {
 		return -EFAULT; // error in copying
 	}
+
 	buffer[count] = '\0'; // null terminate the string
 
 	if (kstrtol(buffer, 10, &pid) == 0) {
@@ -57,7 +63,7 @@ static ssize_t proc_write(struct file* file, const char __user* usr_buf, size_t 
 			return -EINVAL; // negative PID is invalid
 		}
 
-		PID = pid;
+		WRITE_ONCE(PID, pid);
 		printk(KERN_INFO "LKM: Now monitoring PID %ld\n", PID);
 	}
 	else {
