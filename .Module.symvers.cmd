@@ -1,1 +1,0 @@
-cmd_/home/hdski/projects/LKM-PID-Tracking-With-Procfs/Module.symvers :=  sed 's/ko$$/o/'  /home/hdski/projects/LKM-PID-Tracking-With-Procfs/modules.order | scripts/mod/modpost -m -a -E   -o /home/hdski/projects/LKM-PID-Tracking-With-Procfs/Module.symvers -e -i Module.symvers -T - 

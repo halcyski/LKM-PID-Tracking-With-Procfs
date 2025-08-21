@@ -1,1 +1,0 @@
-cmd_/home/hdski/projects/LKM-PID-Tracking-With-Procfs/modules.order := {   echo /home/hdski/projects/LKM-PID-Tracking-With-Procfs/my_module.ko; :; } > /home/hdski/projects/LKM-PID-Tracking-With-Procfs/modules.order
