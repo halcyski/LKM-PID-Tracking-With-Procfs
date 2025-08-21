@@ -4,6 +4,8 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 #include <linux/kprobe.h>
+#include <linux/capability.h>
+#include <linux/user_namespace.h>
 
 MODULE_LICENSE("GPL");
 
